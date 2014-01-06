@@ -20,8 +20,8 @@ function concatenate(inputResources, dest) {
 
     // Append each resource
     inputResources.forEach(function(resource) {
-        // FIXME: some might not have an associated map??!
-        var map = new SourceMapConsumer(resource.sourceMap());
+        var sourceMap = resource.sourceMap() || identitySourceMap(resource);
+        var map = new SourceMapConsumer(sourceMap);
 
         // Rebase the mapping by the lineOffset
         map.eachMapping(function(mapping) {
@@ -48,6 +48,26 @@ function concatenate(inputResources, dest) {
         withSourceMap(generator.toString());
 };
 
+// Generate an "identity" sourcemap that maps each line to itself
+// FIXME: is there a simpler way to generate this?
+function identitySourceMap(resource) {
+    var generator = new SourceMapGenerator({
+        file: resource.filename()
+    });
+
+    // FIXME: might be missing?
+    var absSource = resource.path().absolute();
+    resource.data().split('\n').forEach(function(l, i) {
+        generator.addMapping({
+            generated: { line: i + 1, column: 1 },
+            original:  { line: i + 1, column: 1 },
+            source: absSource
+        });
+    });
+
+    return generator.toString();
+}
+
 
 function allEqual(array) {
     return array.every(function(x) { return x === array[0]; });
@@ -65,7 +85,7 @@ module.exports = function(newName) {
         }
 
         // Concatenated resource is of the same type
-        var concatResource = new Resource({filename: newName, type: types[0]});
+        var concatResource = new Resource({file_name: newName, type: types[0]});
         return [concatenate(resources, concatResource)];
     };
 };

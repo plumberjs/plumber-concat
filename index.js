@@ -59,8 +59,8 @@ function identitySourceMap(resource) {
     var absSource = resource.path().absolute();
     resource.data().split('\n').forEach(function(l, i) {
         generator.addMapping({
-            generated: { line: i + 1, column: 1 },
-            original:  { line: i + 1, column: 1 },
+            generated: { line: i + 1, column: 0 },
+            original:  { line: i + 1, column: 0 },
             source: absSource
         });
     });

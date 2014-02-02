@@ -38,6 +38,11 @@ function concatenate(inputResources, dest) {
             });
         });
 
+        var absSource = resource.path() && resource.path().absolute();
+        if (absSource) {
+            generator.setSourceContent(absSource, resource.data());
+        }
+
         var src = resource.data();
         buffer.push(src);
         lineOffset += src.split('\n').length;
@@ -65,6 +70,8 @@ function identitySourceMap(resource) {
         });
     });
 
+    generator.setSourceContent(absSource, resource.data());
+
     return generator.toString();
 }
 
@@ -75,7 +82,16 @@ function allEqual(array) {
 
 
 module.exports = function(newName) {
+    if (! newName) {
+        throw new Error('Concat called without a new name');
+    }
+
     return function(resources) {
+        // Early escape: if no input, concat returns no resource
+        if (resources.length === 0) {
+            return [];
+        }
+
         var types = resources.map(function(resource) {
             return resource.type();
         });

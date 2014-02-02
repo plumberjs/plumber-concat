@@ -112,7 +112,7 @@ describe('concat', function(){
         });
 
         it('should return a new resource with the same source map (apart from file)', function() {
-            var map = SourceMap.fromMapData(concatResources[0].sourceMap());
+            var map = concatResources[0].sourceMap();
             map.file.should.equal('new-file.js');
 
             // Replace file to be able to compare with original

@@ -1,78 +1,36 @@
-var Resource = require('plumber').Resource;
+var SourceMap = require('mercator').SourceMap;
 
-/* Adapted from mapcat by Eddie Cao to work with Plumber Resources and
- * in-memory data.
- *
- * https://github.com/edc/mapcat
- */
+function generateMap(resource) {
+    // absolute path or filename
+    var absSourcePath = resource.path() ?
+            resource.path().absolute() : resource.filename();
+    return SourceMap.forSource(resource.data(), absSourcePath);
+}
 
-var path = require('path');
+function countLines(source) {
+    return source.split('\n').length;
+}
 
-var SourceMapConsumer = require('source-map').SourceMapConsumer;
-var SourceMapGenerator = require('source-map').SourceMapGenerator;
-
-function concatenate(inputResources, dest) {
-    var buffer = [];
-    var lineOffset = 0;
-    var generator = new SourceMapGenerator({
-        file: dest.filename()
-    });
-
-    // Append each resource
-    inputResources.forEach(function(resource) {
-        var sourceMap = resource.sourceMap() || identitySourceMap(resource);
-        var map = new SourceMapConsumer(sourceMap);
-
-        // Rebase the mapping by the lineOffset
-        map.eachMapping(function(mapping) {
-            generator.addMapping({
-                generated: {
-                    line: mapping.generatedLine + lineOffset,
-                    column: mapping.generatedColumn
-                },
-                original: {
-                    line: mapping.originalLine,
-                    column: mapping.originalColumn
-                },
-                source: mapping.source
-            });
+function concatenate(inputResources) {
+    return inputResources.
+        // Ensure all resources have a source map
+        map(function(resource) {
+            if (resource.sourceMap()) {
+                return resource;
+            } else {
+                return resource.withSourceMap(generateMap(resource));
+            }
+        }).
+        // Iteratively concatenate resources into one
+        reduce(function(accResource, resource) {
+            var accMap = accResource.sourceMap();
+            var accData = accResource.data();
+            var data = [accData, resource.data()].join('\n');
+            var map = accMap.append(resource.sourceMap(), countLines(accData));
+            return accResource.
+                withData(data).
+                withSourceMap(map);
         });
-
-        var absSource = resource.path() && resource.path().absolute();
-        if (absSource) {
-            generator.setSourceContent(absSource, resource.data());
-        }
-
-        var src = resource.data();
-        buffer.push(src);
-        lineOffset += src.split('\n').length;
-    });
-
-    return dest.
-        withData(buffer.join('\n')).
-        withSourceMap(generator.toString());
-};
-
-// Generate an "identity" sourcemap that maps each line to itself
-// FIXME: is there a simpler way to generate this?
-function identitySourceMap(resource) {
-    var generator = new SourceMapGenerator({
-        file: resource.filename()
-    });
-
-    // FIXME: might be missing?
-    var absSource = resource.path().absolute();
-    resource.data().split('\n').forEach(function(l, i) {
-        generator.addMapping({
-            generated: { line: i + 1, column: 0 },
-            original:  { line: i + 1, column: 0 },
-            source: absSource
-        });
-    });
-
-    generator.setSourceContent(absSource, resource.data());
-
-    return generator.toString();
 }
 
 
@@ -100,8 +58,6 @@ module.exports = function(newName) {
             throw new Error('Cannot concat resources of different types: ' + types.join(', '));
         }
 
-        // Concatenated resource is of the same type
-        var concatResource = new Resource({file_name: newName, type: types[0]});
-        return [concatenate(resources, concatResource)];
+        return [concatenate(resources).withFileName(newName)];
     };
 };

@@ -27,9 +27,7 @@ function concatenate(inputResources) {
             var accData = accResource.data();
             var data = [accData, resource.data()].join('\n');
             var map = accMap.append(resource.sourceMap(), countLines(accData));
-            return accResource.
-                withData(data).
-                withSourceMap(map);
+            return accResource.withData(data, map);
         });
 }
 

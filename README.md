@@ -1,4 +1,4 @@
-plumber-concat
+plumber-concat [![Build Status](https://travis-ci.org/plumberjs/plumber-concat.png?branch=master)](https://travis-ci.org/plumberjs/plumber-concat)
 ==============
 
 Concatenation operation for [Plumber](https://github.com/plumberjs/plumber) pipelines.

@@ -4,6 +4,7 @@
   "description": "Concatenation operation for Plumber pipelines",
   "main": "index",
   "dependencies": {
+    "plumber": "~0.3.0",
     "mercator": "~0.1.4"
   },
   "devDependencies": {

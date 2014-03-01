@@ -1,3 +1,4 @@
+var operation = require('plumber').operation;
 var SourceMap = require('mercator').SourceMap;
 
 function generateMap(resource) {
@@ -22,7 +23,10 @@ function concatenate(inputResources) {
             }
         }).
         // Iteratively concatenate resources into one
-        reduce(function(accResource, resource) {
+        reduce1(function(accResource, resource) {
+            // FIXME: send error to the stream
+            assertSameType(accResource, resource);
+
             var accMap = accResource.sourceMap();
             var accData = accResource.data();
             var data = [accData, resource.data()].join('\n');
@@ -32,8 +36,11 @@ function concatenate(inputResources) {
 }
 
 
-function allEqual(array) {
-    return array.every(function(x) { return x === array[0]; });
+function assertSameType(resource1, resource2) {
+    if (resource1.type() !== resource2.type()) {
+        throw new Error('Cannot concat resources of different types: ' +
+                        resource1.type() + ', ' + resource2.type());
+    }
 }
 
 
@@ -42,20 +49,7 @@ module.exports = function(newName) {
         throw new Error('Concat called without a new name');
     }
 
-    return function(resources) {
-        // Early escape: if no input, concat returns no resource
-        if (resources.length === 0) {
-            return [];
-        }
-
-        var types = resources.map(function(resource) {
-            return resource.type();
-        });
-
-        if (! allEqual(types)) {
-            throw new Error('Cannot concat resources of different types: ' + types.join(', '));
-        }
-
-        return [concatenate(resources).withFileName(newName)];
-    };
+    return operation(function(resources) {
+        return concatenate(resources).invoke('withFileName', [newName]);
+    });
 };

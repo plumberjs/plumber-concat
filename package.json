@@ -1,6 +1,6 @@
 {
   "name": "plumber-concat",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Concatenation operation for Plumber pipelines",
   "main": "index",
   "dependencies": {

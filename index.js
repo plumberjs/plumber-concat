@@ -23,7 +23,7 @@ function concatenate(inputResources) {
             }
         }).
         // Iteratively concatenate resources into one
-        reduce1(function(accResource, resource) {
+        scan(function(accResource, resource) {
             // FIXME: send error to the stream
             assertSameType(accResource, resource);
 
@@ -32,7 +32,12 @@ function concatenate(inputResources) {
             var data = [accData, resource.data()].join('\n');
             var map = accMap.append(resource.sourceMap(), countLines(accData));
             return accResource.withData(data, map);
-        });
+        }).
+        // Note: we use a combination of scan+takeLast instead of
+        // reduce in order to correctly return an empty Observable
+        // when there is no input resources (rather than throwing an
+        // error...)
+        takeLast(1);
 }
 
 
@@ -50,6 +55,8 @@ module.exports = function(newName) {
     }
 
     return operation(function(resources) {
-        return concatenate(resources).invoke('withFileName', [newName]);
+        return concatenate(resources).map(function(concatenated) {
+            return concatenated.withFileName(newName);
+        });
     });
 };

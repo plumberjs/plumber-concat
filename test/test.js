@@ -8,6 +8,7 @@ var SourceMap = require('mercator').SourceMap;
 var Resource = require('plumber').Resource;
 
 var runOperation = require('plumber-util-test').runOperation;
+var completeWithResources = require('plumber-util-test').completeWithResources;
 
 var concat = require('..');
 
@@ -17,6 +18,10 @@ function createResource(params) {
 
 function countLines(source) {
     return source.split('\n').length;
+}
+
+function resourcesError(e) {
+  chai.assert(false, "error in resources observable: " + e);
 }
 
 
@@ -38,10 +43,12 @@ describe('concat', function(){
 
     it('should throw an exception if passed files of different types', function(){
         (function() {
-            runOperation(concat('new-file'), [
+            var result = runOperation(concat('new-file'), [
                 createResource({type: 'javascript', path: 'path/to/file.js', data: '\n'}),
                 createResource({type: 'css',        path: 'path/to/file.css', data: '\n'})
-            ]).resources.toArray();
+            ]).resources;
+
+            completeWithResources(result);
         }).should.throw(/Cannot concat resources of different types/);
     });
 
@@ -54,10 +61,9 @@ describe('concat', function(){
         });
 
         it('should return no resources', function(done){
-            result.toArray(function(concatResources) {
+            completeWithResources(result, function(concatResources) {
                 concatResources.length.should.equal(0);
-                done();
-            });
+            }, resourcesError, done);
         });
     });
 
@@ -73,35 +79,31 @@ describe('concat', function(){
         });
 
         it('should return a single new resource', function(done){
-            result.toArray(function(concatResources) {
+            completeWithResources(result, function(concatResources) {
                 concatResources.length.should.equal(1);
-                done();
-            });
+            }, resourcesError, done);
         });
 
         it('should return a new resource with the same content', function(done){
-            result.toArray(function(concatResources) {
+            completeWithResources(result, function(concatResources) {
                 concatResources[0].data().should.equal(source);
-                done();
-            });
+            }, resourcesError, done);
         });
 
         it('should return a new resource with the same type', function(done){
-            result.toArray(function(concatResources) {
+            completeWithResources(result, function(concatResources) {
                 concatResources[0].type().should.equal('javascript');
-                done();
-            });
+            }, resourcesError, done);
         });
 
         it('should return a new resource with the expected name', function(done){
-            result.toArray(function(concatResources) {
+            completeWithResources(result, function(concatResources) {
                 concatResources[0].filename().should.equal('new-file.js');
-                done();
-            });
+            }, resourcesError, done);
         });
 
         it('should return a new resource with an identity source map', function(done){
-            result.toArray(function(concatResources) {
+            completeWithResources(result, function(concatResources) {
                 var map = new SourceMapConsumer(concatResources[0].sourceMap());
                 map.sources.should.deep.equal(['path/to/file.js']);
                 map.sourcesContent.should.deep.equal([source]);
@@ -115,9 +117,7 @@ describe('concat', function(){
                         name: null
                     });
                 }
-
-                done();
-            });
+            }, resourcesError, done);
         });
     });
 
@@ -134,15 +134,14 @@ describe('concat', function(){
         });
 
         it('should return a new resource with the same source map (apart from file)', function(done) {
-            result.toArray(function(concatResources) {
+            completeWithResources(result, function(concatResources) {
                 var map = concatResources[0].sourceMap();
                 map.file.should.equal('new-file.js');
 
                 // Replace file to be able to compare with original
                 var mapWithFile = map.withFile(sourceMap.file);
                 mapWithFile.should.deep.equal(sourceMap);
-                done();
-            });
+            }, resourcesError, done);
         });
     });
 
@@ -160,36 +159,32 @@ describe('concat', function(){
         });
 
         it('should return a single new resource', function(done){
-            result.toArray(function(concatResources) {
+            completeWithResources(result, function(concatResources) {
                 concatResources.length.should.equal(1);
-                done();
-            });
+            }, resourcesError, done);
         });
 
         it('should return a new resource with the concatenated content', function(done){
             var concatenation = sourceFirst + '\n' + sourceSecond;
-            result.toArray(function(concatResources) {
+            completeWithResources(result, function(concatResources) {
                 concatResources[0].data().should.equal(concatenation);
-                done();
-            });
+            }, resourcesError, done);
         });
 
         it('should return a new resource with the same type', function(done){
-            result.toArray(function(concatResources) {
+            completeWithResources(result, function(concatResources) {
                 concatResources[0].type().should.equal('javascript');
-                done();
-            });
+            }, resourcesError, done);
         });
 
         it('should return a new resource with the expected name', function(done){
-            result.toArray(function(concatResources) {
+            completeWithResources(result, function(concatResources) {
                 concatResources[0].filename().should.equal('new-file.js');
-                done();
-            });
+            }, resourcesError, done);
         });
 
         it('should return a new resource with a correct source map', function(done){
-            result.toArray(function(concatResources) {
+            completeWithResources(result, function(concatResources) {
                 var map = new SourceMapConsumer(concatResources[0].sourceMap());
                 map.sources.should.deep.equal([
                     'path/to/first.js',
@@ -221,9 +216,7 @@ describe('concat', function(){
                         name: null
                     });
                 }
-
-                done();
-            });
+            }, resourcesError, done);
         });
     });
 
@@ -242,7 +235,7 @@ describe('concat', function(){
         });
 
         it('should return a new resource with source maps correctly offsetted', function(done){
-            result.toArray(function(concatResources) {
+            completeWithResources(result, function(concatResources) {
                 var map = new SourceMapConsumer(concatResources[0].sourceMap());
                 map.sources.should.deep.equal([
                     'path/to/first.js',
@@ -274,9 +267,7 @@ describe('concat', function(){
                         name: null
                     });
                 }
-
-                done();
-            });
+            }, resourcesError, done);
         });
     });
 

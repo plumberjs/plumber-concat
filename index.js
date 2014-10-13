@@ -31,6 +31,10 @@ function concatenate(inputResources) {
         });
 }
 
+function isErrorReport(resourceOrReport) {
+    // FIXME: hacky heuristic
+    return resourceOrReport.type === 'error';
+}
 
 function allEqual(array) {
     return array.every(function(x) { return x === array[0]; });
@@ -46,6 +50,12 @@ module.exports = function(newName) {
         // Early escape: if no input, concat returns no resource
         if (resources.length === 0) {
             return [];
+        }
+
+        // Early escape: if any error report, concat passes them through
+        var errorReports = resources.filter(isErrorReport);
+        if (errorReports.length > 0) {
+            return errorReports;
         }
 
         var types = resources.map(function(resource) {
